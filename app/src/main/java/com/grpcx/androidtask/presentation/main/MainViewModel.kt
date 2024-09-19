@@ -23,9 +23,7 @@ class MainViewModel @Inject constructor(
     private val useCase: MainUseCase
 ) : ViewModel() {
 
-    private var _mainUiState: MutableStateFlow<MainUiState> = MutableStateFlow(MainUiState())
-
-    val mainUiState: StateFlow<MainUiState> = _mainUiState
+    val mainUiState: StateFlow<MainUiState> = MutableStateFlow(MainUiState())
         .asStateFlow()
         .onStart {
             onFetchLatestData()
