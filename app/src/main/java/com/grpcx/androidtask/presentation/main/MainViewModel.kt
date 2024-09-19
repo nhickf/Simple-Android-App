@@ -10,45 +10,41 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.launchIn
-import kotlinx.coroutines.flow.mapLatest
+import kotlinx.coroutines.flow.flatMapMerge
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+@OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class MainViewModel @Inject constructor(
     private val useCase: MainUseCase
 ) : ViewModel() {
 
     private var _mainUiState: MutableStateFlow<MainUiState> = MutableStateFlow(MainUiState())
+
     val mainUiState: StateFlow<MainUiState> = _mainUiState
         .asStateFlow()
+        .onStart {
+            onFetchLatestData()
+        }
+        .flatMapMerge {
+            useCase.observeCacheData().map {
+                MainUiState(it)
+            }
+        }
         .stateIn(
             scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
+            started = SharingStarted.WhileSubscribed(5000L),
             initialValue = MainUiState()
         )
-
-    init {
-        onFetchLatestData()
-        observeChanges()
-    }
 
     fun onFetchLatestData() {
         viewModelScope.launch {
             useCase.fetchLatestData()
         }
-    }
-
-    @OptIn(ExperimentalCoroutinesApi::class)
-    private fun observeChanges() {
-        useCase.observeCacheData()
-            .mapLatest {
-                _mainUiState.value = MainUiState(
-                    emotion = it
-                )
-            }.launchIn(viewModelScope)
     }
 }
 
